@@ -46,6 +46,11 @@ python cli/generate.py \
   --output json --out-path outputs/validated_data.json
 ```
 
+### Simple Generation (Uses Default Template)
+```bash
+python cli/generate.py --diseases diabetes --patients 10 --output stdout
+```
+
 ### Legacy Mode (Backward Compatible)
 ```bash
 python cli/generate.py --diseases diabetes --patients 10 --doc-types labs --output json
@@ -168,7 +173,8 @@ templates/
 └── general/
     ├── labs/
     ├── vitals/
-    └── encounters/
+    └── letters/
+        └── outpatient_clinic_letter.yaml  ⭐ DEFAULT TEMPLATE
 ```
 
 ### Template Features

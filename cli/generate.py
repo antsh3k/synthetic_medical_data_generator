@@ -268,10 +268,14 @@ def generate_synthetic_data(args: argparse.Namespace, config: Dict[str, Any]) ->
         templates_to_use = convert_doc_types_to_templates(args.doc_types, template_engine)
     
     if not templates_to_use:
-        # Default templates
+        # Default to generic outpatient clinic letter
+        default_template = "general/letters/outpatient_clinic_letter"
         available_templates = template_engine.list_available_templates()
-        if available_templates:
-            templates_to_use = available_templates[:3]  # Use first 3 templates
+        
+        if default_template in available_templates:
+            templates_to_use = [default_template]
+        elif available_templates:
+            templates_to_use = available_templates[:3]  # Fallback to first 3 templates
         else:
             raise ValueError("No templates available and none specified")
     

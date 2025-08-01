@@ -1,0 +1,330 @@
+name: "Outpatient Clinic Letter"
+description: "Generic outpatient clinic letter for any disease presentation"
+document_type: "letters"
+specialty: "general"
+
+# Medical constraints for validation
+constraints:
+  gender_specific: false
+  age_range: [18, 100]
+  conditions_relevant: ["any"] # This template works with any condition
+
+# Template structure with placeholders
+template:
+  letter_type: "Outpatient Clinic Letter"
+  date: "{{letter_date}}"
+  
+  # Header information
+  clinic_info:
+    clinic_name: "{{clinic_name}}"
+    address: "{{clinic_address}}"
+    phone: "{{clinic_phone}}"
+    fax: "{{clinic_fax}}"
+  
+  # Recipient information
+  recipient:
+    provider_name: "{{referring_provider}}"
+    title: "{{provider_title}}"
+    practice_name: "{{referring_practice}}"
+    address: "{{referring_address}}"
+  
+  # Patient information
+  patient:
+    name: "{{patient_name}}"
+    dob: "{{patient_dob}}"
+    mrn: "{{patient_mrn}}"
+    phone: "{{patient_phone}}"
+    insurance: "{{insurance_info}}"
+  
+  # Visit details
+  visit_info:
+    date_of_service: "{{visit_date}}"
+    visit_type: "{{visit_type}}"
+    chief_complaint: "{{chief_complaint}}"
+    duration_of_symptoms: "{{symptom_duration}}"
+  
+  # Clinical content
+  history_of_present_illness: "{{hpi_text}}"
+  
+  past_medical_history:
+    - "{{pmh_item_1}}"
+    - "{{pmh_item_2}}"
+    - "{{pmh_item_3}}"
+  
+  medications:
+    - "{{medication_1}}"
+    - "{{medication_2}}"
+    - "{{medication_3}}"
+  
+  allergies: "{{allergies}}"
+  
+  social_history:
+    smoking: "{{smoking_status}}"
+    alcohol: "{{alcohol_use}}"
+    occupation: "{{occupation}}"
+    exercise: "{{exercise_habits}}"
+  
+  family_history: "{{family_history}}"
+  
+  # Physical examination
+  physical_exam:
+    general_appearance: "{{general_appearance}}"
+    vital_signs:
+      bp: "{{blood_pressure}}"
+      hr: "{{heart_rate}}"
+      temp: "{{temperature}}"
+      rr: "{{respiratory_rate}}"
+      weight: "{{weight}}"
+      height: "{{height}}"
+      bmi: "{{bmi}}"
+    
+    heent: "{{heent_exam}}"
+    cardiovascular: "{{cv_exam}}"
+    respiratory: "{{pulm_exam}}"
+    abdominal: "{{abd_exam}}"
+    neurological: "{{neuro_exam}}"
+    extremities: "{{ext_exam}}"
+    skin: "{{skin_exam}}"
+  
+  # Diagnostic results
+  diagnostic_results:
+    labs: "{{lab_results}}"
+    imaging: "{{imaging_results}}"
+    other_tests: "{{other_test_results}}"
+  
+  # Assessment and plan
+  assessment_and_plan:
+    primary_diagnosis: "{{primary_diagnosis}}"
+    secondary_diagnoses:
+      - "{{secondary_dx_1}}"
+      - "{{secondary_dx_2}}"
+    
+    clinical_impression: "{{clinical_impression}}"
+    
+    plan:
+      medications:
+        - action: "{{med_action_1}}"
+          medication: "{{med_plan_1}}"
+        - action: "{{med_action_2}}"
+          medication: "{{med_plan_2}}"
+      
+      follow_up:
+        - "{{followup_1}}"
+        - "{{followup_2}}"
+      
+      lifestyle_modifications:
+        - "{{lifestyle_1}}"
+        - "{{lifestyle_2}}"
+      
+      additional_testing:
+        - "{{additional_test_1}}"
+        - "{{additional_test_2}}"
+  
+  # Provider information
+  provider:
+    name: "{{attending_physician}}"
+    title: "{{physician_title}}"
+    specialty: "{{physician_specialty}}"
+    npi: "{{provider_npi}}"
+    signature_date: "{{signature_date}}"
+
+# Randomization parameters for various fields
+randomization:
+  visit_type:
+    values: ["Initial Consultation", "Follow-up Visit", "Annual Physical", "Problem-focused Visit", "Preventive Care Visit"]
+    distribution: "categorical"
+  
+  chief_complaint:
+    condition_based: true # Will be generated based on patient conditions
+    
+  symptom_duration:
+    values: ["2 days", "1 week", "2 weeks", "1 month", "3 months", "6 months", "1 year", "several years"]
+    distribution: "categorical"
+    
+  general_appearance:
+    values: [
+      "Well-appearing, in no acute distress",
+      "Appears stated age, alert and oriented",
+      "Pleasant and cooperative",
+      "Mildly anxious but cooperative",
+      "Appears tired but alert"
+    ]
+    distribution: "categorical"
+  
+  smoking_status:
+    values: ["Never smoker", "Former smoker (quit 5 years ago)", "Current smoker (1/2 PPD)", "Current smoker (1 PPD)", "Social smoker"]
+    weights: [0.4, 0.25, 0.15, 0.1, 0.1]
+    distribution: "weighted_categorical"
+  
+  alcohol_use:
+    values: ["Denies alcohol use", "Social drinker (1-2 drinks/week)", "Moderate use (3-4 drinks/week)", "Occasional wine with dinner"]
+    distribution: "categorical"
+  
+  allergies:
+    values: ["NKDA", "PCN - rash", "Sulfa - hives", "Shellfish - swelling", "Environmental allergies"]
+    weights: [0.6, 0.15, 0.1, 0.05, 0.1]
+    distribution: "weighted_categorical"
+
+# Condition-specific content templates
+condition_templates:
+  diabetes:
+    chief_complaint: "Follow-up for diabetes management"
+    hpi_template: "Patient with type 2 diabetes mellitus presents for routine follow-up. Reports {{glucose_control_status}} glycemic control. {{symptom_description}}. Adherent to prescribed medications."
+    primary_diagnosis: "Type 2 Diabetes Mellitus (E11.9)"
+    typical_meds: ["Metformin", "Glipizide", "Insulin glargine"]
+    
+  hypertension:
+    chief_complaint: "Follow-up for hypertension"
+    hpi_template: "Patient with essential hypertension presents for routine follow-up. Blood pressure has been {{bp_control_status}}. {{symptom_description}}. Taking medications as prescribed."
+    primary_diagnosis: "Essential Hypertension (I10)"
+    typical_meds: ["Lisinopril", "Amlodipine", "Hydrochlorothiazide"]
+    
+  asthma:
+    chief_complaint: "Follow-up for asthma management"
+    hpi_template: "Patient with asthma presents for follow-up. Reports {{asthma_control_status}} with current regimen. {{symptom_description}}. Using rescue inhaler {{rescue_frequency}}."
+    primary_diagnosis: "Asthma, unspecified (J45.9)"
+    typical_meds: ["Albuterol inhaler", "Fluticasone inhaler", "Montelukast"]
+    
+  copd:
+    chief_complaint: "Follow-up for COPD management"
+    hpi_template: "Patient with COPD presents for routine follow-up. Reports {{breathing_status}} with current medications. {{symptom_description}}. Continues to work on smoking cessation."
+    primary_diagnosis: "COPD, unspecified (J44.1)"
+    typical_meds: ["Tiotropium", "Salmeterol/Fluticasone", "Prednisone PRN"]
+    
+  heart_disease:
+    chief_complaint: "Follow-up for coronary artery disease"
+    hpi_template: "Patient with coronary artery disease presents for cardiology follow-up. Reports {{cardiac_symptoms_status}}. {{symptom_description}}. Adherent to cardiac medications."
+    primary_diagnosis: "Coronary Artery Disease (I25.10)"
+    typical_meds: ["Atorvastatin", "Metoprolol", "Aspirin", "Clopidogrel"]
+
+# Validation rules for medical accuracy
+validation_rules:
+  - rule: "vital_signs_realistic"
+    condition: "always"
+    validation: "blood_pressure, heart_rate, temperature within physiological ranges"
+    severity: "error"
+  
+  - rule: "bmi_calculation"
+    condition: "weight and height present"
+    validation: "bmi = weight_kg / (height_m)²"
+    severity: "error"
+  
+  - rule: "medication_condition_match"
+    condition: "primary_diagnosis present"
+    validation: "prescribed medications appropriate for diagnosis"
+    severity: "warning"
+  
+  - rule: "follow_up_appropriate"
+    condition: "chronic condition present"
+    validation: "follow-up interval appropriate for condition severity"
+    severity: "info"
+
+# Report format template
+report_template: |
+  {{clinic_name}}
+  {{clinic_address}}
+  Phone: {{clinic_phone}} | Fax: {{clinic_fax}}
+  
+  {{letter_date}}
+  
+  {{referring_provider}}, {{provider_title}}
+  {{referring_practice}}
+  {{referring_address}}
+  
+  RE: {{patient_name}}
+      DOB: {{patient_dob}}
+      MRN: {{patient_mrn}}
+  
+  Dear {{referring_provider}},
+  
+  Thank you for referring {{patient_name}} to our clinic. I had the opportunity to evaluate this patient on {{visit_date}} for {{chief_complaint}}.
+  
+  HISTORY OF PRESENT ILLNESS:
+  {{hpi_text}}
+  
+  PAST MEDICAL HISTORY:
+  {{#each past_medical_history}}
+  • {{this}}
+  {{/each}}
+  
+  MEDICATIONS:
+  {{#each medications}}
+  • {{this}}
+  {{/each}}
+  
+  ALLERGIES: {{allergies}}
+  
+  SOCIAL HISTORY:
+  Tobacco: {{smoking_status}}
+  Alcohol: {{alcohol_use}}
+  Occupation: {{occupation}}
+  
+  FAMILY HISTORY: {{family_history}}
+  
+  PHYSICAL EXAMINATION:
+  General: {{general_appearance}}
+  Vital Signs: BP {{blood_pressure}}, HR {{heart_rate}}, Temp {{temperature}}, RR {{respiratory_rate}}
+  Weight: {{weight}}, Height: {{height}}, BMI: {{bmi}}
+  
+  HEENT: {{heent_exam}}
+  Cardiovascular: {{cv_exam}}
+  Pulmonary: {{pulm_exam}}
+  Abdomen: {{abd_exam}}
+  Neurologic: {{neuro_exam}}
+  Extremities: {{ext_exam}}
+  
+  {{#if lab_results}}
+  LABORATORY/DIAGNOSTIC RESULTS:
+  {{lab_results}}
+  {{/if}}
+  
+  {{#if imaging_results}}
+  {{imaging_results}}
+  {{/if}}
+  
+  ASSESSMENT AND PLAN:
+  
+  PRIMARY DIAGNOSIS: {{primary_diagnosis}}
+  
+  {{#if secondary_diagnoses}}
+  SECONDARY DIAGNOSES:
+  {{#each secondary_diagnoses}}
+  • {{this}}
+  {{/each}}
+  {{/if}}
+  
+  CLINICAL IMPRESSION:
+  {{clinical_impression}}
+  
+  PLAN:
+  {{#each plan.medications}}
+  • {{action}} {{medication}}
+  {{/each}}
+  
+  {{#each plan.follow_up}}
+  • {{this}}
+  {{/each}}
+  
+  {{#if plan.lifestyle_modifications}}
+  Lifestyle Modifications:
+  {{#each plan.lifestyle_modifications}}
+  • {{this}}
+  {{/each}}
+  {{/if}}
+  
+  {{#if plan.additional_testing}}
+  Additional Testing:
+  {{#each plan.additional_testing}}
+  • {{this}}
+  {{/each}}
+  {{/if}}
+  
+  Thank you again for this referral. Please feel free to contact me if you have any questions regarding this patient's care.
+  
+  Sincerely,
+  
+  {{attending_physician}}, {{physician_title}}
+  {{physician_specialty}}
+  NPI: {{provider_npi}}
+  
+  Date: {{signature_date}}
