@@ -62,6 +62,13 @@ class PatientGenerator:
                 'gender_weights': {'male': 0.9, 'female': 1.1},
                 'related_conditions': ['diabetes', 'hypertension', 'heart_disease'],
                 'common_medications': ['orlistat', 'phentermine', 'liraglutide']
+            },
+            'colon_cancer': {
+                'prevalence': 0.05,
+                'age_weights': {(18, 30): 0.1, (31, 50): 0.5, (51, 70): 2.0, (71, 100): 3.5},
+                'gender_weights': {'male': 1.1, 'female': 0.9},
+                'related_conditions': ['obesity', 'diabetes'],
+                'common_medications': ['5-fluorouracil', 'oxaliplatin', 'irinotecan', 'bevacizumab', 'cetuximab']
             }
         }
         

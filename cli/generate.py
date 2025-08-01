@@ -13,6 +13,12 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import json
 
+# Import custom modules
+sys.path.append(os.path.join(os.path.dirname(__file__)))
+from template_engine import TemplateEngine
+from patient_generator import PatientGenerator
+from medical_validator import MedicalValidator, ValidationLevel
+
 def parse_arguments() -> argparse.Namespace:
     """Parse command line arguments with enhanced template and validation options."""
     parser = argparse.ArgumentParser(
@@ -103,10 +109,7 @@ Examples:
 
 def validate_arguments(args: argparse.Namespace) -> None:
     """Validate argument combinations and requirements."""
-    # Ensure either templates or doc-types is specified
-    if not args.templates and not args.doc_types:
-        print("Error: Must specify either --templates or --doc-types", file=sys.stderr)
-        sys.exit(1)
+    # Templates and doc-types are optional - system will use defaults if none specified
     
     # Validate date format
     try:
@@ -221,9 +224,6 @@ def main():
 
 def generate_synthetic_data(args: argparse.Namespace, config: Dict[str, Any]) -> Dict[str, Any]:
     """Generate synthetic medical data using the enhanced pipeline."""
-    from patient_generator import PatientGenerator
-    from template_engine import TemplateEngine
-    from medical_validator import MedicalValidator, ValidationLevel
     
     # Initialize components
     patient_gen = PatientGenerator(seed=config['randomization']['seed'])
