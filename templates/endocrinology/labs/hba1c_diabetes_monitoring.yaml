@@ -1,0 +1,181 @@
+name: "HbA1c Diabetes Monitoring"
+description: "Hemoglobin A1c test for long-term glucose control assessment"
+document_type: "labs"
+specialty: "endocrinology"
+
+# Medical constraints for validation
+constraints:
+  gender_specific: false
+  age_range: [18, 100]
+  conditions_relevant: ["diabetes", "prediabetes", "metabolic_syndrome"]
+  required_conditions: ["diabetes"] # This test is specifically for diabetes patients
+
+# Template structure with placeholders
+template:
+  test_name: "Hemoglobin A1c"
+  collection_date: "{{collection_date}}"
+  patient_id: "{{patient_id}}"
+  ordering_physician: "{{physician_name}}"
+  clinic: "{{clinic_name}}"
+  
+  patient_info:
+    diabetes_type: "{{diabetes_type}}"
+    diagnosis_date: "{{diabetes_diagnosis_date}}"
+    current_medications: "{{diabetes_medications}}"
+    last_hba1c_date: "{{previous_test_date}}"
+    last_hba1c_value: "{{previous_hba1c_value}}"
+  
+  results:
+    hba1c:
+      value: "{{hba1c_value}}"
+      unit: "%"
+      mmol_mol: "{{hba1c_mmol_mol}}"
+      estimated_avg_glucose: "{{eag_value}}"
+      interpretation: "{{hba1c_interpretation}}"
+      target_goal: "{{target_hba1c}}"
+      randomization:
+        distribution: "log_normal"
+        mean: 7.5
+        std: 1.8
+        diabetes_type_modifiers:
+          type_1:
+            mean: 7.8
+            std: 2.1
+          type_2:
+            mean: 7.2
+            std: 1.5
+          gestational:
+            mean: 6.2
+            std: 0.8
+        control_modifiers:
+          well_controlled:
+            mean: 6.8
+            std: 0.5
+          poorly_controlled:
+            mean: 9.5
+            std: 2.0
+
+# Validation rules for medical accuracy
+validation_rules:
+  - rule: "diabetes_diagnosis_required"
+    condition: "always"
+    validation: "diabetes in patient.conditions or prediabetes in patient.conditions"
+    severity: "error"
+  
+  - rule: "hba1c_diabetes_correlation"
+    condition: "diabetes in patient.conditions"
+    validation: "hba1c_value >= 6.5 (diagnostic threshold)"
+    severity: "warning"
+  
+  - rule: "prediabetes_range"
+    condition: "prediabetes in patient.conditions"
+    validation: "hba1c_value between 5.7-6.4"
+    severity: "info"
+  
+  - rule: "gestational_diabetes_range"
+    condition: "diabetes_type == 'gestational' and patient.gender == 'female'"
+    validation: "hba1c_value typically lower due to pregnancy physiology"
+    severity: "info"
+  
+  - rule: "male_gestational_diabetes"
+    condition: "diabetes_type == 'gestational' and patient.gender == 'male'"
+    validation: "false"
+    severity: "error"
+    message: "Males cannot have gestational diabetes"
+  
+  - rule: "eag_hba1c_correlation"
+    condition: "always"
+    validation: "eag_value = 28.7 × hba1c_value - 46.7"
+    severity: "error"
+  
+  - rule: "mmol_mol_conversion"
+    condition: "always"
+    validation: "hba1c_mmol_mol = (hba1c_value - 2.15) × 10.929"
+    severity: "error"
+
+# Enumerated values for consistency
+enumerations:
+  diabetes_type: ["type_1", "type_2", "gestational", "mody", "secondary"]
+  hba1c_interpretation: 
+    - "excellent_control"    # <6.5%
+    - "good_control"         # 6.5-7.0% 
+    - "fair_control"         # 7.1-8.0%
+    - "poor_control"         # 8.1-9.0%
+    - "very_poor_control"    # >9.0%
+  target_hba1c: ["<6.5%", "<7.0%", "<7.5%", "<8.0%", "<8.5%"]
+  diabetes_medications:
+    - "metformin"
+    - "metformin, glipizide"
+    - "metformin, insulin"
+    - "insulin (multiple daily injections)"
+    - "insulin pump therapy"
+    - "metformin, empagliflozin"
+    - "metformin, semaglutide"
+    - "lifestyle modification only"
+
+# Calculated fields
+calculated_fields:
+  hba1c_mmol_mol: "(hba1c_value - 2.15) * 10.929"
+  eag_value: "28.7 * hba1c_value - 46.7"
+  hba1c_interpretation: |
+    if hba1c_value < 6.5: "excellent_control"
+    elif hba1c_value < 7.0: "good_control" 
+    elif hba1c_value < 8.0: "fair_control"
+    elif hba1c_value < 9.0: "poor_control"
+    else: "very_poor_control"
+
+# Clinical decision support
+clinical_recommendations:
+  - condition: "hba1c_value < 7.0"
+    recommendation: "Continue current therapy. Excellent diabetes control."
+  - condition: "hba1c_value >= 7.0 and hba1c_value < 8.0"
+    recommendation: "Consider medication adjustment to reach target <7%."
+  - condition: "hba1c_value >= 8.0 and hba1c_value < 9.0"
+    recommendation: "Medication intensification recommended. Consider adding second agent."
+  - condition: "hba1c_value >= 9.0"
+    recommendation: "Urgent medication adjustment needed. Consider insulin therapy. Diabetes education referral."
+
+# Report format template
+report_template: |
+  HEMOGLOBIN A1c TEST RESULTS
+  
+  Patient ID: {{patient_id}}
+  Collection Date: {{collection_date}}
+  Ordering Physician: {{physician_name}}
+  Clinic: {{clinic_name}}
+  
+  PATIENT INFORMATION:
+  Diabetes Type: {{diabetes_type}}
+  Diagnosis Date: {{diabetes_diagnosis_date}}
+  Current Medications: {{diabetes_medications}}
+  
+  PREVIOUS RESULT:
+  {{#if previous_test_date}}
+  Last HbA1c: {{previous_hba1c_value}}% on {{previous_test_date}}
+  {{else}}
+  No previous HbA1c results available
+  {{/if}}
+  
+  CURRENT RESULTS:
+  HbA1c: {{hba1c_value}}% ({{hba1c_mmol_mol}} mmol/mol)
+  Estimated Average Glucose: {{eag_value}} mg/dL
+  Interpretation: {{hba1c_interpretation}}
+  Target Goal: {{target_hba1c}}
+  
+  REFERENCE RANGES:
+  Normal (non-diabetic): <5.7%
+  Prediabetes: 5.7-6.4%
+  Diabetes: ≥6.5%
+  
+  {{#if clinical_recommendation}}
+  CLINICAL RECOMMENDATION:
+  {{clinical_recommendation}}
+  {{/if}}
+  
+  {{#if trend_analysis}}
+  TREND ANALYSIS:
+  {{trend_analysis}}
+  {{/if}}
+  
+  Note: HbA1c reflects average blood glucose over the past 2-3 months.
+  Next recommended test: {{next_test_date}}

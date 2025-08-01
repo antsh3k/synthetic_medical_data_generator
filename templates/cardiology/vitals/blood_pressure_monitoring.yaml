@@ -1,0 +1,231 @@
+name: "Blood Pressure Monitoring"
+description: "Comprehensive vital signs with focus on cardiovascular parameters"
+document_type: "vitals"
+specialty: "cardiology"
+
+# Medical constraints for validation
+constraints:
+  gender_specific: false
+  age_range: [18, 100]
+  conditions_relevant: ["hypertension", "heart_disease", "diabetes", "obesity"]
+
+# Template structure with placeholders
+template:
+  assessment_type: "Vital Signs Assessment"
+  measurement_date: "{{measurement_date}}"
+  measurement_time: "{{measurement_time}}"
+  patient_id: "{{patient_id}}"
+  measured_by: "{{staff_name}}"
+  location: "{{measurement_location}}"
+  
+  vital_signs:
+    blood_pressure:
+      systolic:
+        value: "{{systolic_bp}}"
+        unit: "mmHg"
+        position: "{{patient_position}}"
+        arm: "{{measurement_arm}}"
+      diastolic:
+        value: "{{diastolic_bp}}"
+        unit: "mmHg"
+      interpretation: "{{bp_interpretation}}"
+      randomization:
+        systolic:
+          distribution: "normal"
+          mean: 125
+          std: 20
+          disease_modifiers:
+            hypertension:
+              mean: 155
+              std: 25
+            diabetes:
+              mean: 135
+              std: 20
+        diastolic:
+          distribution: "normal"
+          mean: 80
+          std: 12
+          disease_modifiers:
+            hypertension:
+              mean: 95
+              std: 15
+    
+    heart_rate:
+      value: "{{heart_rate}}"
+      unit: "bpm"
+      rhythm: "{{heart_rhythm}}"
+      quality: "{{pulse_quality}}"
+      randomization:
+        distribution: "normal"
+        mean: 72
+        std: 12
+        age_modifiers:
+          young: # 18-30
+            mean: 75
+            std: 15
+          elderly: # >65
+            mean: 68
+            std: 10
+        condition_modifiers:
+          heart_disease:
+            mean: 78
+            std: 18
+    
+    respiratory_rate:
+      value: "{{respiratory_rate}}"
+      unit: "breaths/min"
+      pattern: "{{breathing_pattern}}"
+      randomization:
+        distribution: "normal"
+        mean: 16
+        std: 4
+        condition_modifiers:
+          copd:
+            mean: 22
+            std: 6
+          asthma:
+            mean: 20
+            std: 5
+    
+    temperature:
+      value: "{{temperature}}"
+      unit: "°F"
+      method: "{{temp_method}}"
+      randomization:
+        distribution: "normal"
+        mean: 98.6
+        std: 0.8
+    
+    oxygen_saturation:
+      value: "{{oxygen_sat}}"
+      unit: "%"
+      method: "{{spo2_method}}"
+      randomization:
+        distribution: "normal"
+        mean: 98
+        std: 2
+        condition_modifiers:
+          copd:
+            mean: 94
+            std: 4
+          asthma:
+            mean: 96
+            std: 3
+    
+    weight:
+      value: "{{weight}}"
+      unit: "{{weight_unit}}"
+      randomization:
+        distribution: "normal"
+        mean: 170
+        std: 40
+        gender_modifiers:
+          male:
+            mean: 180
+            std: 35
+          female:
+            mean: 160
+            std: 30
+    
+    height:
+      value: "{{height}}"
+      unit: "{{height_unit}}"
+      randomization:
+        distribution: "normal"
+        mean: 66
+        std: 4
+        gender_modifiers:
+          male:
+            mean: 69
+            std: 3
+          female:
+            mean: 64
+            std: 3
+    
+    bmi:
+      value: "{{bmi}}"
+      unit: "kg/m²"
+      category: "{{bmi_category}}"
+      # BMI is calculated from weight and height
+
+# Validation rules for medical accuracy
+validation_rules:
+  - rule: "hypertension_bp_check"
+    condition: "hypertension in patient.conditions"
+    validation: "systolic_bp >= 140 or diastolic_bp >= 90"
+    severity: "warning"
+  
+  - rule: "severe_hypertension"
+    condition: "systolic_bp >= 180 or diastolic_bp >= 120"
+    validation: "requires_immediate_attention = true"
+    severity: "critical"
+  
+  - rule: "pulse_pressure"
+    condition: "always"
+    validation: "systolic_bp - diastolic_bp should be 30-50 mmHg typically"
+    severity: "info"
+  
+  - rule: "tachycardia_check"
+    condition: "heart_rate > 100"
+    validation: "document_rhythm_assessment = true"
+    severity: "warning"
+  
+  - rule: "oxygen_saturation_low"
+    condition: "oxygen_sat < 90"
+    validation: "requires_oxygen_assessment = true"
+    severity: "critical"
+  
+  - rule: "bmi_calculation"
+    condition: "always"
+    validation: "bmi = weight_kg / (height_m)²"
+    severity: "error"
+
+# Enumerated values for consistency
+enumerations:
+  patient_position: ["sitting", "lying", "standing"]
+  measurement_arm: ["left", "right"]
+  bp_interpretation: ["normal", "elevated", "high_stage_1", "high_stage_2", "hypertensive_crisis"]
+  heart_rhythm: ["regular", "irregular", "regularly_irregular"]
+  pulse_quality: ["strong", "weak", "bounding", "thready"]
+  breathing_pattern: ["regular", "shallow", "deep", "labored"]
+  temp_method: ["oral", "axillary", "tympanic", "temporal"]
+  spo2_method: ["pulse_oximetry"]
+  weight_unit: ["lbs", "kg"]
+  height_unit: ["inches", "cm"]
+  bmi_category: ["underweight", "normal", "overweight", "obese_class_i", "obese_class_ii", "obese_class_iii"]
+
+# Report format template
+report_template: |
+  VITAL SIGNS ASSESSMENT
+  
+  Patient ID: {{patient_id}}
+  Date/Time: {{measurement_date}} {{measurement_time}}
+  Location: {{measurement_location}}
+  Measured by: {{staff_name}}
+  
+  VITAL SIGNS:
+  
+  Blood Pressure: {{systolic_bp}}/{{diastolic_bp}} mmHg ({{patient_position}}, {{measurement_arm}} arm)
+  Interpretation: {{bp_interpretation}}
+  
+  Heart Rate: {{heart_rate}} bpm ({{heart_rhythm}}, {{pulse_quality}} quality)
+  Respiratory Rate: {{respiratory_rate}} breaths/min ({{breathing_pattern}})
+  Temperature: {{temperature}}°F ({{temp_method}})
+  Oxygen Saturation: {{oxygen_sat}}% ({{spo2_method}})
+  
+  ANTHROPOMETRIC DATA:
+  Weight: {{weight}} {{weight_unit}}
+  Height: {{height}} {{height_unit}}
+  BMI: {{bmi}} kg/m² ({{bmi_category}})
+  
+  {{#if critical_values}}
+  *** CRITICAL VALUES NOTED ***
+  {{#each critical_values}}
+  - {{this}}
+  {{/each}}
+  {{/if}}
+  
+  {{#if nursing_notes}}
+  NURSING NOTES:
+  {{nursing_notes}}
+  {{/if}}

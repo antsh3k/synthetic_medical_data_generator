@@ -1,0 +1,213 @@
+name: "Comprehensive Metabolic Panel"
+description: "Basic metabolic panel with liver function tests for cardiac patients"
+document_type: "labs"
+specialty: "cardiology"
+
+# Medical constraints for validation
+constraints:
+  gender_specific: false
+  age_range: [18, 100]
+  conditions_relevant: ["diabetes", "hypertension", "heart_disease", "kidney_disease"]
+
+# Template structure with placeholders
+template:
+  test_name: "Comprehensive Metabolic Panel (CMP)"
+  collection_date: "{{collection_date}}"
+  patient_id: "{{patient_id}}"
+  ordering_physician: "{{physician_name}}"
+  
+  results:
+    glucose:
+      value: "{{glucose_value}}"
+      unit: "mg/dL"
+      reference_range: "70-100"
+      critical_values: 
+        low: 50
+        high: 400
+      randomization:
+        distribution: "normal"
+        mean: 95
+        std: 15
+        disease_modifiers:
+          diabetes: 
+            mean: 180
+            std: 40
+    
+    bun:
+      value: "{{bun_value}}"
+      unit: "mg/dL"
+      reference_range: "7-20"
+      critical_values:
+        low: 5
+        high: 50
+      randomization:
+        distribution: "normal"
+        mean: 15
+        std: 5
+        age_modifiers:
+          elderly: # >65
+            mean: 18
+            std: 6
+    
+    creatinine:
+      value: "{{creatinine_value}}"
+      unit: "mg/dL"
+      reference_range: "0.6-1.2"
+      critical_values:
+        low: 0.3
+        high: 5.0
+      randomization:
+        distribution: "normal"
+        mean: 0.9
+        std: 0.2
+        gender_modifiers:
+          male:
+            mean: 1.0
+            std: 0.2
+          female:
+            mean: 0.8
+            std: 0.15
+    
+    sodium:
+      value: "{{sodium_value}}"
+      unit: "mEq/L"
+      reference_range: "136-145"
+      critical_values:
+        low: 120
+        high: 160
+      randomization:
+        distribution: "normal"
+        mean: 140
+        std: 3
+    
+    potassium:
+      value: "{{potassium_value}}"
+      unit: "mEq/L"
+      reference_range: "3.5-5.0"
+      critical_values:
+        low: 2.5
+        high: 6.5
+      randomization:
+        distribution: "normal"
+        mean: 4.2
+        std: 0.4
+    
+    chloride:
+      value: "{{chloride_value}}"
+      unit: "mEq/L"
+      reference_range: "98-107"
+      randomization:
+        distribution: "normal"
+        mean: 102
+        std: 3
+    
+    co2:
+      value: "{{co2_value}}"
+      unit: "mEq/L"
+      reference_range: "22-29"
+      randomization:
+        distribution: "normal"
+        mean: 25
+        std: 2
+    
+    alt:
+      value: "{{alt_value}}"
+      unit: "U/L"
+      reference_range: "7-56"
+      critical_values:
+        high: 200
+      randomization:
+        distribution: "log_normal"
+        mean: 25
+        std: 15
+        gender_modifiers:
+          male:
+            mean: 30
+          female:
+            mean: 20
+    
+    ast:
+      value: "{{ast_value}}"
+      unit: "U/L"
+      reference_range: "10-40"
+      critical_values:
+        high: 200
+      randomization:
+        distribution: "log_normal"
+        mean: 25
+        std: 12
+    
+    total_bilirubin:
+      value: "{{bilirubin_value}}"
+      unit: "mg/dL"
+      reference_range: "0.1-1.2"
+      critical_values:
+        high: 5.0
+      randomization:
+        distribution: "log_normal"
+        mean: 0.6
+        std: 0.3
+    
+    albumin:
+      value: "{{albumin_value}}"
+      unit: "g/dL"
+      reference_range: "3.5-5.0"
+      randomization:
+        distribution: "normal"
+        mean: 4.2
+        std: 0.4
+
+# Validation rules for medical accuracy
+validation_rules:
+  - rule: "glucose_diabetes_check"
+    condition: "diabetes in patient.conditions"
+    validation: "glucose_value >= 126 or random_glucose >= 200"
+    severity: "warning"
+  
+  - rule: "creatinine_kidney_function"
+    condition: "kidney_disease in patient.conditions"
+    validation: "creatinine_value >= 1.5"
+    severity: "error"
+  
+  - rule: "potassium_critical"
+    condition: "potassium_value < 2.5 or potassium_value > 6.5"
+    validation: "requires_immediate_attention = true"
+    severity: "critical"
+  
+  - rule: "liver_enzyme_correlation"
+    condition: "alt_value > 100"
+    validation: "ast_value should be elevated proportionally"
+    severity: "warning"
+
+# Report format template
+report_template: |
+  COMPREHENSIVE METABOLIC PANEL
+  
+  Patient ID: {{patient_id}}
+  Collection Date: {{collection_date}}
+  Ordering Physician: {{physician_name}}
+  
+  CHEMISTRY RESULTS:
+  
+  Glucose: {{glucose_value}} {{glucose_unit}} ({{glucose_reference_range}})
+  BUN: {{bun_value}} {{bun_unit}} ({{bun_reference_range}})
+  Creatinine: {{creatinine_value}} {{creatinine_unit}} ({{creatinine_reference_range}})
+  
+  ELECTROLYTES:
+  Sodium: {{sodium_value}} {{sodium_unit}} ({{sodium_reference_range}})
+  Potassium: {{potassium_value}} {{potassium_unit}} ({{potassium_reference_range}})
+  Chloride: {{chloride_value}} {{chloride_unit}} ({{chloride_reference_range}})
+  CO2: {{co2_value}} {{co2_unit}} ({{co2_reference_range}})
+  
+  LIVER FUNCTION:
+  ALT: {{alt_value}} {{alt_unit}} ({{alt_reference_range}})
+  AST: {{ast_value}} {{ast_unit}} ({{ast_reference_range}})
+  Total Bilirubin: {{bilirubin_value}} {{bilirubin_unit}} ({{bilirubin_reference_range}})
+  Albumin: {{albumin_value}} {{albumin_unit}} ({{albumin_reference_range}})
+  
+  {{#if abnormal_values}}
+  ABNORMAL VALUES NOTED:
+  {{#each abnormal_values}}
+  - {{this}}
+  {{/each}}
+  {{/if}}
