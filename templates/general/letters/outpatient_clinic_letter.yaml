@@ -196,6 +196,12 @@ condition_templates:
     hpi_template: "Patient with coronary artery disease presents for cardiology follow-up. Reports {{cardiac_symptoms_status}}. {{symptom_description}}. Adherent to cardiac medications."
     primary_diagnosis: "Coronary Artery Disease (I25.10)"
     typical_meds: ["Atorvastatin", "Metoprolol", "Aspirin", "Clopidogrel"]
+    
+  colon_cancer:
+    chief_complaint: "Follow-up for colon cancer treatment"
+    hpi_template: "Patient with {{cancer_stage}} colon adenocarcinoma presents for oncology follow-up. {{treatment_status}} with current chemotherapy regimen. Reports {{symptom_description}} and {{performance_status}}. {{side_effects_status}}."
+    primary_diagnosis: "Malignant neoplasm of colon (C18.9)"
+    typical_meds: ["5-fluorouracil", "Oxaliplatin", "Irinotecan", "Bevacizumab", "Cetuximab"]
 
 # Validation rules for medical accuracy
 validation_rules:
