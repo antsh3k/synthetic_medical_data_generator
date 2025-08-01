@@ -97,6 +97,10 @@ class TemplateEngine:
         # Process template with values
         document = self._process_template(template, values)
         
+        # Generate full document text if report_template exists
+        if 'report_template' in template:
+            document['document_text'] = self._generate_document_text(template['report_template'], values)
+        
         # Add metadata
         document['_metadata'] = {
             'template_path': template_path,
@@ -166,6 +170,9 @@ class TemplateEngine:
         
         # Add common placeholders
         values.update(self._generate_common_placeholders(patient))
+        
+        # Add medical content placeholders
+        values.update(self._generate_medical_content_placeholders(template, patient))
         
         return values
     
@@ -512,3 +519,381 @@ class TemplateEngine:
             return eval(formula)
         except:
             return None
+    
+    def _generate_medical_content_placeholders(self, template: Dict[str, Any], patient: Patient) -> Dict[str, Any]:
+        """Generate medical content placeholders for clinical narratives."""
+        medical_content = {}
+        
+        # Get condition-specific templates
+        condition_templates = template.get('condition_templates', {})
+        randomization_rules = template.get('randomization', {})
+        
+        # Find the primary condition for this patient
+        primary_condition = None
+        for condition in patient.conditions:
+            if condition in condition_templates:
+                primary_condition = condition
+                break
+        
+        # Generate condition-specific content
+        if primary_condition:
+            condition_template = condition_templates[primary_condition]
+            
+            # Chief complaint
+            medical_content['chief_complaint'] = condition_template.get('chief_complaint', 'Routine follow-up')
+            
+            # Primary diagnosis
+            medical_content['primary_diagnosis'] = condition_template.get('primary_diagnosis', 'Unspecified condition')
+            
+            # Generate HPI based on condition template
+            hpi_template = condition_template.get('hpi_template', 'Patient presents for routine follow-up.')
+            medical_content['hpi_text'] = self._populate_hpi_template(hpi_template, primary_condition, patient)
+            
+        else:
+            # Generic content if no specific condition template
+            medical_content.update({
+                'chief_complaint': 'Routine follow-up visit',
+                'primary_diagnosis': 'General medical examination',
+                'hpi_text': 'Patient presents for routine medical follow-up. Overall doing well with current treatment regimen.'
+            })
+        
+        # Generate additional medical content
+        medical_content.update(self._generate_physical_exam_content(patient))
+        medical_content.update(self._generate_assessment_and_plan(patient, primary_condition))
+        medical_content.update(self._generate_vital_signs(patient))
+        medical_content.update(self._generate_social_history(patient))
+        
+        # Add structured data for template loops
+        medical_content['past_medical_history'] = self._generate_pmh_list(patient)
+        medical_content['medications'] = patient.medications if patient.medications else ['None']
+        
+        # Add plan structure for template
+        medical_content['plan'] = {
+            'medications': [
+                {'action': medical_content.get('med_action_1', 'Continue'), 'medication': medical_content.get('med_plan_1', 'current medications')},
+                {'action': medical_content.get('med_action_2', 'Continue'), 'medication': medical_content.get('med_plan_2', 'supportive care')}
+            ],
+            'follow_up': [
+                medical_content.get('followup_1', 'Return to clinic in 3 months'),
+                medical_content.get('followup_2', 'Continue current medications')
+            ],
+            'lifestyle_modifications': [
+                medical_content.get('lifestyle_1', 'Continue regular exercise as tolerated'),
+                medical_content.get('lifestyle_2', 'Maintain healthy diet')
+            ],
+            'additional_testing': [
+                medical_content.get('additional_test_1', 'Laboratory studies as indicated'),
+                medical_content.get('additional_test_2', 'Imaging studies if needed')
+            ]
+        }
+        
+        # Add secondary diagnoses list
+        secondary_diagnoses = [cond for cond in patient.conditions if cond != primary_condition][:2]
+        if secondary_diagnoses:
+            medical_content['secondary_diagnoses'] = secondary_diagnoses
+        
+        # Generate randomized content from template rules
+        if randomization_rules:
+            for field, rules in randomization_rules.items():
+                if 'values' in rules:
+                    if rules.get('distribution') == 'weighted_categorical' and 'weights' in rules:
+                        medical_content[field] = self.random.choices(rules['values'], weights=rules['weights'])[0]
+                    else:
+                        medical_content[field] = self.random.choice(rules['values'])
+        
+        return medical_content
+    
+    def _populate_hpi_template(self, hpi_template: str, condition: str, patient: Patient) -> str:
+        """Populate HPI template with condition-specific content."""
+        replacements = {}
+        
+        if condition == 'colon_cancer':
+            replacements.update({
+                'cancer_stage': self.random.choice(['Stage II', 'Stage IIIA', 'Stage IIIB', 'Stage IV']),
+                'treatment_status': self.random.choice(['Tolerating well', 'Experiencing mild side effects', 'Good response']),
+                'symptom_description': self.random.choice([
+                    'minimal gastrointestinal symptoms',
+                    'mild fatigue but maintaining activity level',
+                    'some nausea with recent chemotherapy cycle'
+                ]),
+                'performance_status': self.random.choice([
+                    'maintains good performance status',
+                    'able to perform activities of daily living',
+                    'reports improved energy levels'
+                ]),
+                'side_effects_status': self.random.choice([
+                    'Minimal treatment-related side effects',
+                    'Manageable neuropathy in fingertips',
+                    'Occasional mild nausea, controlled with medication'
+                ])
+            })
+        elif condition == 'diabetes':
+            replacements.update({
+                'glucose_control_status': self.random.choice(['good', 'fair', 'suboptimal']),
+                'symptom_description': self.random.choice([
+                    'Denies polyuria, polydipsia, or polyphagia',
+                    'Reports occasional increased thirst',
+                    'Some fatigue but otherwise stable'
+                ])
+            })
+        elif condition == 'hypertension':
+            replacements.update({
+                'bp_control_status': self.random.choice(['well-controlled', 'moderately controlled', 'suboptimal']),
+                'symptom_description': self.random.choice([
+                    'Denies chest pain, shortness of breath, or headaches',
+                    'Occasional mild headaches',
+                    'No concerning cardiovascular symptoms'
+                ])
+            })
+        
+        # Replace placeholders in HPI template
+        result = hpi_template
+        for placeholder, value in replacements.items():
+            result = result.replace(f'{{{{{placeholder}}}}}', value)
+        
+        return result
+    
+    def _generate_physical_exam_content(self, patient: Patient) -> Dict[str, Any]:
+        """Generate physical examination findings."""
+        return {
+            'general_appearance': self.random.choice([
+                'Well-appearing, in no acute distress',
+                'Appears stated age, alert and oriented',
+                'Pleasant and cooperative',
+                'Mildly fatigued but alert'
+            ]),
+            'heent_exam': 'Normocephalic, atraumatic. PERRLA. No lymphadenopathy.',
+            'cv_exam': self.random.choice([
+                'Regular rate and rhythm. No murmurs, gallops, or rubs.',
+                'RRR. Normal S1, S2.',
+                'Regular rate and rhythm. No edema.'
+            ]),
+            'pulm_exam': self.random.choice([
+                'Clear to auscultation bilaterally.',
+                'Clear bilaterally with good air movement.',
+                'No wheezes, rales, or rhonchi.'
+            ]),
+            'abd_exam': self.random.choice([
+                'Soft, non-tender, non-distended. Normal bowel sounds.',
+                'Benign. No masses or organomegaly.',
+                'Soft, non-tender. No guarding or rebound.'
+            ]),
+            'neuro_exam': 'Alert and oriented x3. Grossly intact.',
+            'ext_exam': 'No edema, cyanosis, or clubbing.',
+            'skin_exam': 'No rashes or lesions noted.'
+        }
+    
+    def _generate_assessment_and_plan(self, patient: Patient, primary_condition: Optional[str]) -> Dict[str, Any]:
+        """Generate assessment and plan content."""
+        content = {}
+        
+        # Secondary diagnoses from patient conditions
+        secondary_diagnoses = [cond for cond in patient.conditions if cond != primary_condition][:2]
+        content['secondary_dx_1'] = secondary_diagnoses[0] if len(secondary_diagnoses) > 0 else 'None'
+        content['secondary_dx_2'] = secondary_diagnoses[1] if len(secondary_diagnoses) > 1 else 'None'
+        
+        # Clinical impression
+        if primary_condition == 'colon_cancer':
+            content['clinical_impression'] = self.random.choice([
+                'Patient with colon cancer responding well to current chemotherapy regimen.',
+                'Stable colon adenocarcinoma on active treatment with manageable side effects.',
+                'Good tolerance of current oncological therapy with adequate performance status.'
+            ])
+        else:
+            content['clinical_impression'] = 'Patient stable on current medical regimen.'
+        
+        # Medication actions
+        content['med_action_1'] = self.random.choice(['Continue', 'Increase', 'Adjust'])
+        content['med_action_2'] = self.random.choice(['Continue', 'Add', 'Monitor'])
+        content['med_plan_1'] = patient.medications[0] if patient.medications else 'current medications'
+        content['med_plan_2'] = patient.medications[1] if len(patient.medications) > 1 else 'supportive care'
+        
+        # Follow-up plans
+        content['followup_1'] = self.random.choice([
+            'Return to clinic in 3 months',
+            'Follow-up in 4-6 weeks',
+            'Return PRN for concerns'
+        ])
+        content['followup_2'] = self.random.choice([
+            'Continue current medications',
+            'Laboratory studies in 3 months',
+            'Monitor symptoms'
+        ])
+        
+        # Lifestyle modifications
+        content['lifestyle_1'] = self.random.choice([
+            'Continue regular exercise as tolerated',
+            'Maintain healthy diet',
+            'Adequate rest and stress management'
+        ])
+        content['lifestyle_2'] = self.random.choice([
+            'Smoking cessation counseling',
+            'Weight management as appropriate',
+            'Adherence to medication regimen'
+        ])
+        
+        # Additional testing
+        if primary_condition == 'colon_cancer':
+            content['additional_test_1'] = self.random.choice([
+                'CEA level in 3 months',
+                'CT abdomen/pelvis in 3 months',
+                'CBC and CMP prior to next cycle'
+            ])
+            content['additional_test_2'] = self.random.choice([
+                'Nutritional assessment',
+                'Oncology follow-up in 2 weeks',
+                'Supportive care evaluation'
+            ])
+        else:
+            content['additional_test_1'] = 'Laboratory studies as indicated'
+            content['additional_test_2'] = 'Imaging studies if needed'
+        
+        return content
+    
+    def _generate_vital_signs(self, patient: Patient) -> Dict[str, Any]:
+        """Generate realistic vital signs."""
+        # Base vital signs with condition modifications
+        bp_systolic = 120
+        bp_diastolic = 80
+        
+        if 'hypertension' in patient.conditions:
+            bp_systolic = self.random.randint(130, 160)
+            bp_diastolic = self.random.randint(85, 100)
+        
+        return {
+            'blood_pressure': f"{bp_systolic}/{bp_diastolic}",
+            'heart_rate': str(self.random.randint(60, 100)),
+            'temperature': f"{self.random.uniform(97.0, 99.5):.1f}°F",
+            'respiratory_rate': str(self.random.randint(12, 20)),
+            'weight': f"{self.random.randint(120, 250)} lbs",
+            'height': f"{self.random.randint(60, 76)} inches",
+            'bmi': f"{self.random.uniform(20.0, 35.0):.1f}"
+        }
+    
+    def _generate_social_history(self, patient: Patient) -> Dict[str, Any]:
+        """Generate social history content."""
+        return {
+            'pmh_item_1': self.random.choice([
+                'Hypertension', 'Diabetes', 'Hyperlipidemia', 'Osteoarthritis'
+            ]) if len(patient.conditions) > 0 else 'No significant PMH',
+            'pmh_item_2': self.random.choice([
+                'Previous surgery', 'Medication allergies', 'No hospitalizations'
+            ]),
+            'pmh_item_3': 'See medication list',
+            'medication_1': patient.medications[0] if len(patient.medications) > 0 else 'None',
+            'medication_2': patient.medications[1] if len(patient.medications) > 1 else '',
+            'medication_3': patient.medications[2] if len(patient.medications) > 2 else ''
+        }
+    
+    def _generate_pmh_list(self, patient: Patient) -> List[str]:
+        """Generate past medical history list."""
+        pmh_items = []
+        
+        # Add patient conditions as past medical history
+        for condition in patient.conditions:
+            if condition == 'colon_cancer':
+                pmh_items.append('Colon adenocarcinoma, diagnosed 2023')
+            elif condition == 'diabetes':
+                pmh_items.append('Type 2 diabetes mellitus')
+            elif condition == 'hypertension':
+                pmh_items.append('Essential hypertension')
+            elif condition == 'asthma':
+                pmh_items.append('Asthma')
+            elif condition == 'copd':
+                pmh_items.append('Chronic obstructive pulmonary disease')
+            elif condition == 'heart_disease':
+                pmh_items.append('Coronary artery disease')
+            elif condition == 'obesity':
+                pmh_items.append('Obesity')
+            else:
+                pmh_items.append(condition.replace('_', ' ').title())
+        
+        # Add some additional common PMH items
+        additional_pmh = self.random.choices([
+            'Hyperlipidemia',
+            'Osteoarthritis',
+            'GERD',
+            'Vitamin D deficiency',
+            'Previous appendectomy',
+            'No other significant medical history'
+        ], k=self.random.randint(1, 2))
+        
+        pmh_items.extend(additional_pmh)
+        
+        return pmh_items if pmh_items else ['No significant past medical history']
+    
+    def _generate_document_text(self, report_template: str, values: Dict[str, Any]) -> str:
+        """Generate full document text from report template."""
+        # Simple template replacement (would use Jinja2 in production)
+        result = report_template
+        
+        # Replace all {{placeholder}} patterns
+        def replace_placeholder(match):
+            placeholder = match.group(1).strip()
+            return str(values.get(placeholder, f'[{placeholder}]'))
+        
+        result = re.sub(r'\{\{([^}]+)\}\}', replace_placeholder, result)
+        
+        # Handle simple conditionals and loops (basic implementation)
+        # This is a simplified version - would use proper templating engine in production
+        
+        # Handle {{#if condition}} blocks
+        def handle_if_blocks(text):
+            # Handle both {{#if field}} content {{/if}} and [#if field] content [/if]
+            patterns = [
+                r'\{\{#if\s+([^}]+)\}\}(.*?)\{\{/if\}\}',
+                r'\[#if\s+([^\]]+)\](.*?)\[/if\]'
+            ]
+            
+            def replace_if(match):
+                condition_field = match.group(1).strip()
+                content = match.group(2)
+                
+                # Check if field exists and has value
+                if condition_field in values and values[condition_field] and values[condition_field] not in ['None', '', []]:
+                    return content
+                return ''
+            
+            result = text
+            for pattern in patterns:
+                result = re.sub(pattern, replace_if, result, flags=re.DOTALL)
+            return result
+        
+        # Handle {{#each array}} blocks  
+        def handle_each_blocks(text):
+            # Handle both {{#each field}} {{this}} {{/each}} and [#each field] [this] [/each]
+            patterns = [
+                r'\{\{#each\s+([^}]+)\}\}(.*?)\{\{/each\}\}',
+                r'\[#each\s+([^\]]+)\](.*?)\[/each\]'
+            ]
+            
+            def replace_each(match):
+                field_name = match.group(1).strip()
+                item_template = match.group(2)
+                
+                if field_name in values and isinstance(values[field_name], list):
+                    result = []
+                    for item in values[field_name]:
+                        if isinstance(item, str):
+                            # Handle both {{this}} and [this] patterns
+                            item_text = item_template.replace('{{this}}', item).replace('[this]', item)
+                        else:
+                            item_text = item_template.replace('{{this}}', str(item)).replace('[this]', str(item))
+                        result.append(item_text)
+                    return ''.join(result)
+                return ''
+            
+            result = text
+            for pattern in patterns:
+                result = re.sub(pattern, replace_each, result, flags=re.DOTALL)
+            return result
+        
+        # Apply template processing
+        result = handle_if_blocks(result)
+        result = handle_each_blocks(result)
+        
+        # Clean up extra whitespace
+        result = re.sub(r'\n\s*\n\s*\n', '\n\n', result)  # Remove multiple blank lines
+        result = result.strip()
+        
+        return result
